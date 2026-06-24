@@ -567,7 +567,28 @@ function DoctorsTab() {
             </div>
             <div>
               <label className="text-xs font-medium text-slate-500 mb-1 block">Spesialisasi</label>
-              <input value={form.specialty} onChange={e => setForm({ ...form, specialty: e.target.value })} placeholder="Contoh: Poli Jantung" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-200 focus:border-slate-300 transition-all" />
+              <select value={form.specialty} onChange={e => setForm({ ...form, specialty: e.target.value })} className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-200 focus:border-slate-300 transition-all bg-white">
+                <option value="">Pilih Spesialisasi</option>
+                <option value="Dokter Umum">Dokter Umum</option>
+                <option value="Spesialis Anak">Spesialis Anak</option>
+                <option value="Spesialis Gigi">Spesialis Gigi</option>
+                <option value="Spesialis Jantung">Spesialis Jantung</option>
+                <option value="Spesialis Kulit & Kelamin">Spesialis Kulit & Kelamin</option>
+                <option value="Spesialis Mata">Spesialis Mata</option>
+                <option value="Spesialis Saraf">Spesialis Saraf</option>
+                <option value="Spesialis THT">Spesialis THT</option>
+                <option value="Spesialis Kandungan">Spesialis Kandungan</option>
+                <option value="Spesialis Penyakit Dalam">Spesialis Penyakit Dalam</option>
+                <option value="Spesialis Bedah">Spesialis Bedah</option>
+                <option value="Spesialis Orthopedi">Spesialis Orthopedi</option>
+                <option value="Spesialis Paru">Spesialis Paru</option>
+                <option value="Spesialis Jiwa">Spesialis Jiwa</option>
+                <option value="Spesialis Rehabilitasi Medik">Spesialis Rehabilitasi Medik</option>
+                <option value="Spesialis Radiologi">Spesialis Radiologi</option>
+                <option value="Spesialis Anestesi">Spesialis Anestesi</option>
+                <option value="Spesialis Patologi">Spesialis Patologi</option>
+                <option value="Spesialis Lainnya">Spesialis Lainnya</option>
+              </select>
             </div>
             <div>
               <label className="text-xs font-medium text-slate-500 mb-1 block">Sesi 1 (Pagi)</label>
