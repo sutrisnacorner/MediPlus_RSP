@@ -82,7 +82,19 @@ export type StaffMessage = {
   sender_id: string
   sender_name: string
   content: string
+  recipient_id: string | null
+  is_broadcast: boolean
+  is_read: boolean
   created_at: string
+}
+
+export type StaffPresence = {
+  user_id: string
+  name: string
+  role: string
+  photo: string | null
+  is_online: boolean
+  last_seen: string
 }
 
 export type ConsultationRequest = {

@@ -1,6 +1,7 @@
 import { Routes, Route } from 'react-router-dom'
 import { AuthProvider } from './lib/auth'
 import Sidebar from './components/Sidebar'
+import ChatWidget from './components/ChatWidget'
 import JadwalDokter from './pages/JadwalDokter'
 import Notes from './pages/Notes'
 import Settings from './pages/Settings'
@@ -23,6 +24,7 @@ export default function App() {
             <Route path="/cuti-dokter" element={<CutiDokter />} />
           </Routes>
         </main>
+        <ChatWidget />
       </div>
     </AuthProvider>
   )
