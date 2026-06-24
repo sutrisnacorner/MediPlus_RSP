@@ -345,6 +345,200 @@ export default function JadwalDokter() {
         </div>
       ) : (
         <div className="space-y-4">
+          {/* Dokter Umum — always at top */}
+          {(() => {
+            const umumDoctors = schedules.filter(s => s.specialty === 'Dokter Umum' && s.is_active)
+            if (umumDoctors.length === 0) return null
+            return (
+              <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+                <button onClick={() => toggle(999)} className="w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-50 transition-colors">
+                  <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${expanded.includes(999) ? '' : '-rotate-90'}`} />
+                  <span className="font-semibold text-sm text-slate-800">Dokter Umum</span>
+                  <span className="text-xs text-slate-400">{umumDoctors.length} dokter</span>
+                </button>
+                {expanded.includes(999) && (
+                  <div className="px-4 pb-4 space-y-3">
+                    {/* Pagi */}
+                    {umumDoctors.filter(d => d.session_1).length > 0 && (
+                      <div>
+                        <div className="text-[10px] text-slate-400 uppercase tracking-wider mb-2 font-semibold">Dokter Umum Pagi</div>
+                        <div className="space-y-3">
+                          {umumDoctors.filter(d => d.session_1).map((doc, di) => {
+                            const docPatients = getPatientsForDoctor(doc.name)
+                            return (
+                              <div key={`umum-pagi-${di}`} className={`border rounded-lg ${doc.is_on_leave ? 'border-red-200 bg-red-50/30' : 'border-slate-100'}`}>
+                                <div className="flex items-center gap-3 px-4 py-3">
+                                  <div className={`w-8 h-8 rounded-full text-xs font-bold flex items-center justify-center ${doc.is_on_leave ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>
+                                    {doc.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()}
+                                  </div>
+                                  <div className="flex-1">
+                                    <div className="flex items-center gap-2">
+                                      <p className="text-sm font-semibold text-slate-800">{doc.name}</p>
+                                      {doc.is_on_leave && (
+                                        <span className="px-2 py-0.5 bg-red-100 text-red-600 text-[10px] font-semibold rounded-full border border-red-200">CUTI</span>
+                                      )}
+                                    </div>
+                                    <div className="flex items-center gap-3 text-xs text-slate-400 mt-0.5">
+                                      <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {doc.session_1 || '-'}{doc.session_2 ? ' / ' + doc.session_2 : ''}</span>
+                                      <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {doc.room || '-'}</span>
+                                    </div>
+                                    {doc.is_on_leave && doc.leave_note && (
+                                      <p className="text-[10px] text-red-500 mt-1">{doc.leave_note}</p>
+                                    )}
+                                  </div>
+                                  <div className="flex items-center gap-2 text-xs text-slate-400">
+                                    <User className="w-3 h-3" />
+                                    <span>{docPatients.length}</span>
+                                  </div>
+                                </div>
+                                {docPatients.length > 0 && (
+                                  <div className="px-4 pb-3">
+                                    <div className="text-[10px] text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-1">
+                                      <span>📋</span> Daftar Antrean Pasien Reguler
+                                    </div>
+                                    <div className="border border-slate-200 rounded-lg overflow-hidden">
+                                      <table className="w-full text-xs">
+                                        <thead className="bg-slate-50">
+                                          <tr className="text-slate-400 text-[10px] uppercase">
+                                            <th className="px-3 py-2 text-left font-medium">No</th>
+                                            <th className="px-3 py-2 text-left font-medium">No. MR</th>
+                                            <th className="px-3 py-2 text-left font-medium">Nama Pasien</th>
+                                            <th className="px-3 py-2 text-left font-medium">Telepon</th>
+                                            <th className="px-3 py-2 text-left font-medium">Status</th>
+                                            <th className="px-3 py-2 text-left font-medium">Aksi</th>
+                                          </tr>
+                                        </thead>
+                                        <tbody>
+                                          {docPatients.map((p, pi) => {
+                                            const s = statusMeta(p.status)
+                                            return (
+                                              <tr key={p.id} className="border-t border-slate-100 hover:bg-slate-50 transition-colors">
+                                                <td className="px-3 py-2 text-slate-600">{String(pi + 1).padStart(2, '0')}</td>
+                                                <td className="px-3 py-2 text-slate-600 font-medium">{p.mr_no}</td>
+                                                <td className="px-3 py-2 text-slate-800 font-medium">{p.name}</td>
+                                                <td className="px-3 py-2 text-slate-500">
+                                                  <button onClick={() => openWhatsapp(p, { ...doc, specialty: 'Dokter Umum' })} className="flex items-center gap-1 text-blue-500 hover:text-blue-700 transition-colors">
+                                                    <Phone className="w-3 h-3" /> {p.phone}
+                                                  </button>
+                                                </td>
+                                                <td className="px-3 py-2">
+                                                  <button onClick={(e) => canEditPatient ? openStatusDropdown(p.id, e) : undefined} className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium border transition-all ${s.color}`}>
+                                                    <span className={`inline-block w-2.5 h-2.5 rounded-full ${s.dot}`} /> {s.label}
+                                                    {canEditPatient && <ChevronDown className="w-3 h-3" />}
+                                                  </button>
+                                                </td>
+                                                <td className="px-3 py-2">
+                                                  <button onClick={() => openWhatsapp(p, { ...doc, specialty: 'Dokter Umum' })} disabled={!canSendWA} className="w-6 h-6 rounded-md flex items-center justify-center text-slate-400 hover:text-emerald-500 hover:bg-emerald-50 transition-all disabled:opacity-50" title="Kirim WhatsApp">
+                                                    <MessageCircle className="w-3.5 h-3.5" />
+                                                  </button>
+                                                </td>
+                                              </tr>
+                                            )
+                                          })}
+                                        </tbody>
+                                      </table>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )}
+                    {/* Sore */}
+                    {umumDoctors.filter(d => d.session_2).length > 0 && (
+                      <div>
+                        <div className="text-[10px] text-slate-400 uppercase tracking-wider mb-2 font-semibold">Dokter Umum Sore</div>
+                        <div className="space-y-3">
+                          {umumDoctors.filter(d => d.session_2).map((doc, di) => {
+                            const docPatients = getPatientsForDoctor(doc.name)
+                            return (
+                              <div key={`umum-sore-${di}`} className={`border rounded-lg ${doc.is_on_leave ? 'border-red-200 bg-red-50/30' : 'border-slate-100'}`}>
+                                <div className="flex items-center gap-3 px-4 py-3">
+                                  <div className={`w-8 h-8 rounded-full text-xs font-bold flex items-center justify-center ${doc.is_on_leave ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>
+                                    {doc.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()}
+                                  </div>
+                                  <div className="flex-1">
+                                    <div className="flex items-center gap-2">
+                                      <p className="text-sm font-semibold text-slate-800">{doc.name}</p>
+                                      {doc.is_on_leave && (
+                                        <span className="px-2 py-0.5 bg-red-100 text-red-600 text-[10px] font-semibold rounded-full border border-red-200">CUTI</span>
+                                      )}
+                                    </div>
+                                    <div className="flex items-center gap-3 text-xs text-slate-400 mt-0.5">
+                                      <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {doc.session_1 || '-'}{doc.session_2 ? ' / ' + doc.session_2 : ''}</span>
+                                      <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {doc.room || '-'}</span>
+                                    </div>
+                                    {doc.is_on_leave && doc.leave_note && (
+                                      <p className="text-[10px] text-red-500 mt-1">{doc.leave_note}</p>
+                                    )}
+                                  </div>
+                                  <div className="flex items-center gap-2 text-xs text-slate-400">
+                                    <User className="w-3 h-3" />
+                                    <span>{docPatients.length}</span>
+                                  </div>
+                                </div>
+                                {docPatients.length > 0 && (
+                                  <div className="px-4 pb-3">
+                                    <div className="text-[10px] text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-1">
+                                      <span>📋</span> Daftar Antrean Pasien Reguler
+                                    </div>
+                                    <div className="border border-slate-200 rounded-lg overflow-hidden">
+                                      <table className="w-full text-xs">
+                                        <thead className="bg-slate-50">
+                                          <tr className="text-slate-400 text-[10px] uppercase">
+                                            <th className="px-3 py-2 text-left font-medium">No</th>
+                                            <th className="px-3 py-2 text-left font-medium">No. MR</th>
+                                            <th className="px-3 py-2 text-left font-medium">Nama Pasien</th>
+                                            <th className="px-3 py-2 text-left font-medium">Telepon</th>
+                                            <th className="px-3 py-2 text-left font-medium">Status</th>
+                                            <th className="px-3 py-2 text-left font-medium">Aksi</th>
+                                          </tr>
+                                        </thead>
+                                        <tbody>
+                                          {docPatients.map((p, pi) => {
+                                            const s = statusMeta(p.status)
+                                            return (
+                                              <tr key={p.id} className="border-t border-slate-100 hover:bg-slate-50 transition-colors">
+                                                <td className="px-3 py-2 text-slate-600">{String(pi + 1).padStart(2, '0')}</td>
+                                                <td className="px-3 py-2 text-slate-600 font-medium">{p.mr_no}</td>
+                                                <td className="px-3 py-2 text-slate-800 font-medium">{p.name}</td>
+                                                <td className="px-3 py-2 text-slate-500">
+                                                  <button onClick={() => openWhatsapp(p, { ...doc, specialty: 'Dokter Umum' })} className="flex items-center gap-1 text-blue-500 hover:text-blue-700 transition-colors">
+                                                    <Phone className="w-3 h-3" /> {p.phone}
+                                                  </button>
+                                                </td>
+                                                <td className="px-3 py-2">
+                                                  <button onClick={(e) => canEditPatient ? openStatusDropdown(p.id, e) : undefined} className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium border transition-all ${s.color}`}>
+                                                    <span className={`inline-block w-2.5 h-2.5 rounded-full ${s.dot}`} /> {s.label}
+                                                    {canEditPatient && <ChevronDown className="w-3 h-3" />}
+                                                  </button>
+                                                </td>
+                                                <td className="px-3 py-2">
+                                                  <button onClick={() => openWhatsapp(p, { ...doc, specialty: 'Dokter Umum' })} disabled={!canSendWA} className="w-6 h-6 rounded-md flex items-center justify-center text-slate-400 hover:text-emerald-500 hover:bg-emerald-50 transition-all disabled:opacity-50" title="Kirim WhatsApp">
+                                                    <MessageCircle className="w-3.5 h-3.5" />
+                                                  </button>
+                                                </td>
+                                              </tr>
+                                            )
+                                          })}
+                                        </tbody>
+                                      </table>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )
+          })()}
           {specialties.map((specName, si) => {
             const isOpen = expanded.includes(si)
             const specDoctors = schedules.filter(s => s.specialty === specName)
