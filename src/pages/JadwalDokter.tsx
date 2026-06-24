@@ -6,7 +6,7 @@ import { canEdit, canSend, canPrint } from '../lib/permissions'
 import type { ChatTemplate, Patient, DoctorSchedule } from '../lib/supabase'
 
 const PATIENT_STATUSES = [
-  { key: 'menunggu', label: 'Menunggu', color: 'bg-amber-50 text-amber-600 border-amber-200', dot: 'bg-amber-400' },
+  { key: 'menunggu', label: 'Sudah di WA', color: 'bg-amber-50 text-amber-600 border-amber-200', dot: 'bg-amber-400' },
   { key: 'belum_jawab', label: 'Belum Jawab', color: 'bg-slate-50 text-slate-500 border-slate-200', dot: 'bg-slate-400' },
   { key: 'jadi_datang', label: 'Jadi Datang', color: 'bg-emerald-50 text-emerald-600 border-emerald-200', dot: 'bg-emerald-400' },
   { key: 'batal', label: 'Batal', color: 'bg-red-50 text-red-600 border-red-200', dot: 'bg-red-400' },

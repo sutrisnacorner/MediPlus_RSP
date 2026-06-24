@@ -14,6 +14,14 @@ export type Note = {
   updated_at: string
 }
 
+export type NoteView = {
+  id: string
+  note_id: string
+  user_id: string
+  user_name: string
+  viewed_at: string
+}
+
 export type AppUser = {
   id: string
   name: string

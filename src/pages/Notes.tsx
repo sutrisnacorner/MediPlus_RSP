@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback } from 'react'
 import {
   Plus, Trash2, Save, PenLine, StickyNote,
-  Palette, Search, Check, ArrowLeft
+  Palette, Search, Check, ArrowLeft, Eye, X
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
-import type { Note } from '../lib/supabase'
+import { useAuth } from '../lib/auth'
+import type { Note, NoteView } from '../lib/supabase'
 
 const NOTE_COLORS = [
   { key: 'white', bg: 'bg-white', border: 'border-slate-200', accent: 'bg-slate-400', label: 'Putih', preview: 'bg-slate-100' },
@@ -18,7 +19,9 @@ const NOTE_COLORS = [
 ]
 
 export default function Notes() {
+  const { user } = useAuth()
   const [notes, setNotes] = useState<Note[]>([])
+  const [noteViews, setNoteViews] = useState<Record<string, NoteView[]>>({})
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [editing, setEditing] = useState<Note | null>(null)
@@ -27,20 +30,70 @@ export default function Notes() {
   const [formContent, setFormContent] = useState('')
   const [formColor, setFormColor] = useState('yellow')
   const [saving, setSaving] = useState(false)
+  const [viewingNote, setViewingNote] = useState<Note | null>(null)
+  const [viewers, setViewers] = useState<NoteView[]>([])
 
   const fetchNotes = useCallback(async () => {
     setLoading(true)
-    const { data, error } = await supabase
+    const { data: notesData, error: notesError } = await supabase
       .from('notes')
       .select('*')
       .order('updated_at', { ascending: false })
-    if (!error && data) setNotes(data)
+    if (!notesError && notesData) {
+      setNotes(notesData)
+      // Fetch views for all notes
+      const noteIds = notesData.map(n => n.id)
+      if (noteIds.length > 0) {
+        const { data: viewsData } = await supabase
+          .from('note_views')
+          .select('*')
+          .in('note_id', noteIds)
+        if (viewsData) {
+          const viewsMap: Record<string, NoteView[]> = {}
+          for (const v of viewsData) {
+            if (!viewsMap[v.note_id]) viewsMap[v.note_id] = []
+            viewsMap[v.note_id].push(v)
+          }
+          setNoteViews(viewsMap)
+        }
+      }
+    }
     setLoading(false)
   }, [])
 
   useEffect(() => {
     fetchNotes()
   }, [fetchNotes])
+
+  const recordView = async (noteId: string) => {
+    if (!user?.id) return
+    const { data: existing } = await supabase
+      .from('note_views')
+      .select('id')
+      .eq('note_id', noteId)
+      .eq('user_id', user.id)
+      .maybeSingle()
+    if (existing) {
+      // Update existing view timestamp
+      await supabase.from('note_views').update({ viewed_at: new Date().toISOString() }).eq('id', existing.id)
+    } else {
+      // Insert new view
+      await supabase.from('note_views').insert({
+        note_id: noteId,
+        user_id: user.id,
+        user_name: user.name,
+      })
+    }
+    // Refresh views for this note
+    const { data: views } = await supabase
+      .from('note_views')
+      .select('*')
+      .eq('note_id', noteId)
+    if (views) {
+      setNoteViews(prev => ({ ...prev, [noteId]: views }))
+      setViewers(views)
+    }
+  }
 
   const resetForm = () => {
     setFormTitle('')
@@ -76,7 +129,10 @@ export default function Notes() {
 
   const handleDelete = async (id: string) => {
     const { error } = await supabase.from('notes').delete().eq('id', id)
-    if (!error) await fetchNotes()
+    if (!error) {
+      await supabase.from('note_views').delete().eq('note_id', id)
+      await fetchNotes()
+    }
   }
 
   const startEdit = (note: Note) => {
@@ -85,11 +141,26 @@ export default function Notes() {
     setFormColor(note.color)
     setEditing(note)
     setCreating(false)
+    setViewingNote(null)
   }
 
   const startCreate = () => {
     resetForm()
     setCreating(true)
+    setViewingNote(null)
+  }
+
+  const openView = (note: Note) => {
+    setViewingNote(note)
+    setEditing(null)
+    setCreating(false)
+    setViewers(noteViews[note.id] || [])
+    recordView(note.id)
+  }
+
+  const closeView = () => {
+    setViewingNote(null)
+    setViewers([])
   }
 
   const filteredNotes = notes.filter(
@@ -209,6 +280,58 @@ export default function Notes() {
         </div>
       )}
 
+      {/* View Note Modal */}
+      {viewingNote && (
+        <div className="bg-white border border-slate-200 rounded-xl p-5 mb-6 shadow-sm animate-in fade-in slide-in-from-top-2 duration-300">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <button onClick={closeView} className="text-slate-400 hover:text-slate-600 transition-colors">
+                <ArrowLeft className="w-4 h-4" />
+              </button>
+              <h2 className="text-sm font-semibold text-slate-700">{viewingNote.title}</h2>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => startEdit(viewingNote)}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-md transition-all"
+              >
+                <PenLine className="w-3 h-3" /> Edit
+              </button>
+              <button onClick={closeView} className="w-7 h-7 rounded-md flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+          <div className="prose prose-sm max-w-none text-sm text-slate-700 leading-relaxed whitespace-pre-wrap mb-4">
+            {viewingNote.content}
+          </div>
+          {/* Viewers */}
+          <div className="border-t border-slate-100 pt-3">
+            <div className="flex items-center gap-2 mb-2">
+              <Eye className="w-3.5 h-3.5 text-slate-400" />
+              <span className="text-xs font-medium text-slate-500">Dibaca oleh {viewers.length} petugas</span>
+            </div>
+            {viewers.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {viewers.map(v => (
+                  <div key={v.id} className="flex items-center gap-1.5 px-2.5 py-1 bg-slate-50 border border-slate-200 rounded-full">
+                    <div className="w-4 h-4 rounded-full bg-blue-100 text-blue-600 text-[8px] font-bold flex items-center justify-center">
+                      {v.user_name.split(' ').map(w => w[0]).join('').slice(0, 1).toUpperCase()}
+                    </div>
+                    <span className="text-[11px] text-slate-600">{v.user_name}</span>
+                    <span className="text-[9px] text-slate-400">
+                      {new Date(v.viewed_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-slate-400 italic">Belum ada yang membaca</p>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Notes Grid */}
       {loading ? (
         <div className="flex items-center justify-center py-20">
@@ -224,11 +347,12 @@ export default function Notes() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {filteredNotes.map(note => {
             const c = colorMeta(note.color)
+            const views = noteViews[note.id] || []
             return (
               <div
                 key={note.id}
                 className={`relative group ${c.bg} border ${c.border} rounded-xl p-4 hover:shadow-md hover:-translate-y-1 transition-all duration-300 cursor-pointer`}
-                onClick={() => startEdit(note)}
+                onClick={() => openView(note)}
               >
                 {/* Top color bar */}
                 <div className={`absolute top-0 left-4 right-4 h-1 rounded-b-full ${c.accent}`} />
@@ -255,7 +379,16 @@ export default function Notes() {
                   <span className="text-[10px] text-slate-400">
                     {new Date(note.updated_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
                   </span>
-                  <div className={`w-3 h-3 rounded-full ${c.preview}`} />
+                  <div className="flex items-center gap-1.5">
+                    {/* View count */}
+                    {views.length > 0 && (
+                      <div className="flex items-center gap-1 text-[10px] text-slate-400" title={`Dibaca oleh ${views.length} petugas`}>
+                        <Eye className="w-3 h-3" />
+                        <span>{views.length}</span>
+                      </div>
+                    )}
+                    <div className={`w-3 h-3 rounded-full ${c.preview}`} />
+                  </div>
                 </div>
               </div>
             )
