@@ -117,6 +117,7 @@ export type ConsultationRequest = {
   session: string
   status: string
   note: string
+  approved_by_name: string | null
   created_at: string
   updated_at: string
 }

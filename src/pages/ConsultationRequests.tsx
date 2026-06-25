@@ -75,7 +75,11 @@ export default function ConsultationRequests() {
   }
 
   const updateStatus = async (id: string, status: string) => {
-    const { error } = await supabase.from('consultation_requests').update({ status, updated_at: new Date().toISOString() }).eq('id', id)
+    const update: Record<string, any> = { status, updated_at: new Date().toISOString() }
+    if (status === 'approved') {
+      update.approved_by_name = user?.name || ''
+    }
+    const { error } = await supabase.from('consultation_requests').update(update).eq('id', id)
     if (!error) await fetchData()
   }
 
@@ -233,6 +237,7 @@ export default function ConsultationRequests() {
                 <th className="px-4 py-3 text-left font-medium">Sesi</th>
                 <th className="px-4 py-3 text-left font-medium">Pengaju</th>
                 <th className="px-4 py-3 text-left font-medium">Status</th>
+                <th className="px-4 py-3 text-left font-medium">Disetujui Oleh</th>
                 <th className="px-4 py-3 text-right font-medium">Aksi</th>
               </tr>
             </thead>
@@ -262,6 +267,9 @@ export default function ConsultationRequests() {
                         <span className={`inline-block w-2 h-2 rounded-full ${st.dot}`} />
                         {st.label}
                       </span>
+                    </td>
+                    <td className="px-4 py-3 text-sm text-slate-600">
+                      {r.approved_by_name || '-'}
                     </td>
                     <td className="px-4 py-3 text-right">
                       <div className="flex items-center justify-end gap-1">

@@ -1,20 +1,33 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { NavLink } from 'react-router-dom'
-import { Calendar, Stethoscope, Settings, ChevronRight, StickyNote, LogIn, LogOut, ShieldCheck, PenLine, X, Save, ClipboardList, XCircle } from 'lucide-react'
+import { Calendar, Stethoscope, Settings, ChevronRight, StickyNote, LogIn, LogOut, ShieldCheck, PenLine, X, Save, ClipboardList, XCircle, ChevronLeft } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 import { canView } from '../lib/permissions'
 
-const days = ['S', 'S', 'R', 'K', 'J', 'S', 'M']
-const calendarDates = [
-  [0, 0, 1, 2, 3, 4, 5],
-  [6, 7, 8, 9, 10, 11, 12],
-  [13, 14, 15, 16, 17, 18, 19],
-  [20, 21, 22, 23, 24, 25, 26],
-  [27, 28, 29, 30, 0, 0, 0],
-]
+const days = ['M', 'S', 'S', 'R', 'K', 'J', 'S']
 
-const today = 20
+function getMonthDates(year: number, month: number) {
+  const first = new Date(year, month, 1)
+  const last = new Date(year, month + 1, 0)
+  const startDay = first.getDay() // 0=Sun, 1=Mon... adjust to 0=Mon
+  const adjustedStart = startDay === 0 ? 6 : startDay - 1
+  const numDays = last.getDate()
+  const weeks: number[][] = []
+  let week: number[] = []
+  for (let i = 0; i < adjustedStart; i++) week.push(0)
+  for (let d = 1; d <= numDays; d++) {
+    week.push(d)
+    if (week.length === 7) { weeks.push(week); week = [] }
+  }
+  if (week.length > 0) {
+    while (week.length < 7) week.push(0)
+    weeks.push(week)
+  }
+  return weeks
+}
+
+const monthNames = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember']
 
 export default function Sidebar() {
   const [pagesOpen, setPagesOpen] = useState(true)
@@ -24,6 +37,40 @@ export default function Sidebar() {
   const [saving, setSaving] = useState(false)
   const { user, logout } = useAuth()
   const role = user?.role || ''
+  const [pendingCount, setPendingCount] = useState(0)
+
+  useEffect(() => {
+    const fetchPending = async () => {
+      const { count } = await supabase.from('consultation_requests').select('*', { count: 'exact', head: true }).eq('status', 'pending')
+      setPendingCount(count || 0)
+    }
+    fetchPending()
+    const interval = setInterval(fetchPending, 30000)
+    return () => clearInterval(interval)
+  }, [])
+
+  const [calMonth, setCalMonth] = useState(() => new Date().getMonth())
+  const [calYear, setCalYear] = useState(() => new Date().getFullYear())
+  const [selectedDate, setSelectedDate] = useState<number | null>(null)
+  const now = new Date()
+  const today = new Date().getDate()
+  const thisMonth = now.getMonth()
+  const thisYear = now.getFullYear()
+  const calendarDates = getMonthDates(calYear, calMonth)
+
+  const prevMonth = () => {
+    if (calMonth === 0) { setCalMonth(11); setCalYear(calYear - 1) }
+    else { setCalMonth(calMonth - 1) }
+  }
+  const nextMonth = () => {
+    if (calMonth === 11) { setCalMonth(0); setCalYear(calYear + 1) }
+    else { setCalMonth(calMonth + 1) }
+  }
+  const goToday = () => {
+    setCalMonth(thisMonth)
+    setCalYear(thisYear)
+    setSelectedDate(today)
+  }
 
   return (
     <aside className="w-64 h-screen bg-white border-r border-slate-200 flex flex-col shrink-0 overflow-y-auto scrollbar-thin">
@@ -32,7 +79,7 @@ export default function Sidebar() {
         <div className="w-8 h-8 rounded-lg bg-blue-500 flex items-center justify-center">
           <Stethoscope className="w-4 h-4 text-white" />
         </div>
-        <span className="font-semibold text-slate-800 text-sm">RS Harapan Medika</span>
+        <span className="font-semibold text-slate-800 text-sm">MedPlus</span>
         <ChevronRight className="w-4 h-4 text-slate-400 ml-auto" />
       </div>
 
@@ -90,6 +137,11 @@ export default function Sidebar() {
               >
                 <ClipboardList className="w-4 h-4" />
                 Request Konsul
+                {pendingCount > 0 && (
+                  <span className="ml-auto px-1.5 py-0.5 bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[18px] text-center">
+                    {pendingCount > 9 ? '9+' : pendingCount}
+                  </span>
+                )}
               </NavLink>
             )}
             {canView('cuti_dokter', role) && (
@@ -132,29 +184,44 @@ export default function Sidebar() {
       {/* Calendar */}
       <div className="px-4 mt-6">
         <div className="bg-white rounded-xl border border-slate-200 p-3">
-          <h3 className="text-xs font-semibold text-slate-800 mb-3">Juni 2026</h3>
+          <div className="flex items-center justify-between mb-3">
+            <button onClick={prevMonth} className="w-5 h-5 rounded-md flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all">
+              <ChevronLeft className="w-3 h-3" />
+            </button>
+            <h3 className="text-xs font-semibold text-slate-800">{monthNames[calMonth]} {calYear}</h3>
+            <button onClick={nextMonth} className="w-5 h-5 rounded-md flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all">
+              <ChevronRight className="w-3 h-3" />
+            </button>
+          </div>
           <div className="grid grid-cols-7 gap-1 text-center">
             {days.map((d, i) => (
               <div key={i} className="text-[10px] text-slate-400 font-medium py-1">
                 {d}
               </div>
             ))}
-            {calendarDates.flat().map((d, i) => (
-              <div
-                key={i}
-                className={`text-[10px] py-1 rounded-md cursor-pointer transition-colors ${
-                  d === today
-                    ? 'bg-blue-500 text-white font-semibold'
-                    : d === 0
-                    ? 'text-transparent'
-                    : 'text-slate-600 hover:bg-slate-100'
-                }`}
-              >
-                {d || ''}
-              </div>
-            ))}
+            {calendarDates.flat().map((d, i) => {
+              const isToday = d === today && calMonth === thisMonth && calYear === thisYear
+              const isSelected = selectedDate === d && d !== 0
+              return (
+                <button
+                  key={i}
+                  onClick={() => d !== 0 && setSelectedDate(d)}
+                  className={`text-[10px] py-1 rounded-md transition-all ${
+                    isToday
+                      ? 'bg-blue-500 text-white font-semibold'
+                      : isSelected
+                      ? 'bg-emerald-500 text-white font-semibold'
+                      : d === 0
+                      ? 'text-transparent'
+                      : 'text-slate-600 hover:bg-slate-100'
+                  }`}
+                >
+                  {d || ''}
+                </button>
+              )
+            })}
           </div>
-          <button className="w-full mt-2 text-[10px] text-blue-500 font-medium hover:text-blue-600 transition-colors">
+          <button onClick={goToday} className="w-full mt-2 text-[10px] text-blue-500 font-medium hover:text-blue-600 transition-colors">
             Kembali ke hari ini
           </button>
         </div>

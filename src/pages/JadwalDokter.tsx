@@ -272,7 +272,7 @@ export default function JadwalDokter() {
       body { font-family: system-ui, -apple-system, sans-serif; margin: 0; padding: 10mm; color: #334155; }
     </style></head><body>
       <div style="text-align:center;margin-bottom:16px;">
-        <h2 style="font-size:16px;font-weight:700;margin:0;color:#1e293b;">RS Harapan Medika</h2>
+        <h2 style="font-size:16px;font-weight:700;margin:0;color:#1e293b;">MedPlus</h2>
         <p style="font-size:12px;color:#64748b;margin:4px 0 0 0;">Jadwal Dokter & Daftar Pasien</p>
         <p style="font-size:11px;color:#94a3b8;margin:2px 0 0 0;">${dateStr}</p>
       </div>
