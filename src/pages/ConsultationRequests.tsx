@@ -21,6 +21,11 @@ export default function ConsultationRequests() {
   const [patientName, setPatientName] = useState('')
   const [patientMr, setPatientMr] = useState('')
   const [selectedDoctor, setSelectedDoctor] = useState('')
+
+  const formatMr = (raw: string) => {
+    const digits = raw.replace(/\D/g, '').slice(0, 12)
+    return digits.replace(/(\d{2})(?=\d)/g, '$1-')
+  }
   const [selectedSession, setSelectedSession] = useState('1')
   const [note, setNote] = useState('')
   const [saving, setSaving] = useState(false)
@@ -42,7 +47,8 @@ export default function ConsultationRequests() {
   useEffect(() => { fetchData() }, [fetchData])
 
   const handleSave = async () => {
-    if (!patientName.trim() || !patientMr.trim() || !selectedDoctor) return
+    const cleanMr = patientMr.replace(/-/g, '').trim()
+    if (!patientName.trim() || !cleanMr || !selectedDoctor) return
     const doc = doctors.find(d => d.id === selectedDoctor)
     if (!doc) return
     setSaving(true)
@@ -50,7 +56,7 @@ export default function ConsultationRequests() {
       requester_name: user?.name || '',
       requester_role: user?.role || '',
       patient_name: patientName.trim(),
-      patient_mr: patientMr.trim(),
+      patient_mr: cleanMr,
       doctor_id: doc.id,
       doctor_name: doc.name,
       specialty: doc.specialty,
@@ -156,7 +162,13 @@ export default function ConsultationRequests() {
             </div>
             <div>
               <label className="text-xs font-medium text-slate-500 mb-1 block">No. MR</label>
-              <input value={patientMr} onChange={e => setPatientMr(e.target.value)} placeholder="MR-2026-001" className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-200 focus:border-teal-300 transition-all" />
+              <input
+                value={formatMr(patientMr)}
+                onChange={e => setPatientMr(e.target.value.replace(/\D/g, ''))}
+                placeholder="12-34-56-78"
+                maxLength={18}
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-200 focus:border-teal-300 transition-all font-mono tracking-wide"
+              />
             </div>
             <div className="sm:col-span-2">
               <label className="text-xs font-medium text-slate-500 mb-1 block">Pilih Dokter</label>
@@ -249,7 +261,7 @@ export default function ConsultationRequests() {
                     <td className="px-4 py-3">
                       <div>
                         <p className="text-sm font-medium text-slate-800">{r.patient_name}</p>
-                        <p className="text-xs text-slate-400">{r.patient_mr}</p>
+                        <p className="text-xs text-slate-400 font-mono tracking-wide">{formatMr(r.patient_mr)}</p>
                         {r.note && <p className="text-xs text-slate-500 mt-1">{r.note}</p>}
                       </div>
                     </td>
